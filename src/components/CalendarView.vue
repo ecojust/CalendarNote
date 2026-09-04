@@ -482,6 +482,7 @@ onUnmounted(() => {
   padding: 0;
   background: transparent;
   overflow: hidden;
+  border: none;
 }
 
 .calendar-container::before {
@@ -504,12 +505,15 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   height: 36px;
-  background: transparent;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.06),
+    rgba(255, 255, 255, 0)
+  );
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
   user-select: none;
   flex-shrink: 0;
-  border-top-left-radius: 20px;
-  border-top-right-radius: 20px;
 }
 
 .titlebar-title {
@@ -555,6 +559,11 @@ onUnmounted(() => {
   background: transparent;
   display: flex;
   flex-direction: column;
+}
+
+.fc .fc-scrollgrid > tbody .fc-scrollgrid-section > td {
+  border-bottom-color: transparent !important;
+  box-shadow: none !important;
 }
 
 .fc .fc-toolbar-title {
@@ -616,20 +625,13 @@ onUnmounted(() => {
 }
 
 .fc .fc-scrollgrid {
-  border: none;
+  border: none !important;
+  border-bottom: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
   border-radius: 12px;
   overflow: hidden;
   margin: 0 12px 12px;
-  flex: 1;
-  min-height: 0;
-}
-
-.fc .fc-scrollgrid-section {
-  flex: 1;
-  min-height: 0;
-}
-
-.fc .fc-scrollgrid-section-body {
   flex: 1;
   min-height: 0;
 }
@@ -659,26 +661,34 @@ onUnmounted(() => {
 .fc .fc-daygrid-row-cells td {
   height: 100%;
 }
-
+.fc-daygrid-day-top {
+  align-items: center;
+  justify-content: center;
+  a {
+    display: block;
+  }
+}
 .fc .fc-col-header-cell {
   background: transparent;
   border: none;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  border-bottom: 1px solid rgba(255, 255, 255, 0);
   padding: 8px 0;
 
   .fc-col-header-cell-cushion {
+    display: block;
     color: rgba(255, 255, 255, 0.8);
     font-weight: 600;
     font-size: 11px;
     letter-spacing: 1px;
     text-transform: uppercase;
     padding: 4px 0;
+    text-align: center;
   }
 }
 
 .fc .fc-daygrid-day {
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   transition: background 0.2s ease;
   cursor: pointer;
 
@@ -694,10 +704,14 @@ onUnmounted(() => {
 }
 
 .fc .fc-daygrid-day-number {
+  display: flex;
+  justify-content: center;
+  align-items: center;
   color: white;
   font-weight: 600;
   font-size: 12px;
   padding: 6px 8px 2px;
+  text-align: center;
 
   &:hover {
     color: #ff6b9d;

@@ -192,7 +192,6 @@ async function handleMoveNote(id: string, newDate: string) {
   width: 100vw;
   height: 100vh;
   border-radius: 20px;
-
   overflow: hidden;
   background: transparent;
 }
@@ -218,9 +217,10 @@ async function handleMoveNote(id: string, newDate: string) {
   -webkit-backdrop-filter: blur(24px) saturate(150%) brightness(1.12);
   border-radius: 20px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
     0 18px 40px rgba(176, 126, 184, 0.12),
     0 8px 22px rgba(124, 98, 150, 0.1);
   transition:
@@ -234,7 +234,7 @@ async function handleMoveNote(id: string, newDate: string) {
   position: absolute;
   inset: -18% -12%;
   border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 1);
+  border: none;
   pointer-events: none;
   background: radial-gradient(
     circle at var(--pointer-x) var(--pointer-y),
@@ -268,9 +268,10 @@ async function handleMoveNote(id: string, newDate: string) {
         rgba(255, 255, 255, 0.05) 30%,
         rgba(255, 255, 255, 0) 52%
       );
-    border-color: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.08);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.04),
       0 18px 40px rgba(24, 18, 36, 0.18),
       0 8px 22px rgba(70, 58, 84, 0.12);
   }

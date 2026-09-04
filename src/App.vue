@@ -1,6 +1,14 @@
 <template>
   <div id="app">
-    <div class="app-container">
+    <div
+      class="app-container"
+      :style="{
+        '--pointer-x': `${pointer.x}%`,
+        '--pointer-y': `${pointer.y}%`,
+      }"
+      @pointerleave="resetPointer"
+    >
+      <div class="glass-glow" aria-hidden="true" />
       <CalendarView
         :notes="notes"
         @add-note="handleAddNote"
@@ -12,7 +20,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, onBeforeUnmount } from "vue";
 import CalendarView from "./components/CalendarView.vue";
 // @ts-ignore
 import Database from "@tauri-apps/plugin-sql";
@@ -28,10 +36,38 @@ interface Note {
 }
 
 const notes = ref<Note[]>([]);
+const pointer = ref({ x: 50, y: 50 });
+let animationFrameId: number | null = null;
 
 onMounted(async () => {
   await loadNotes();
+  window.addEventListener("pointermove", handlePointerMove, { passive: true });
 });
+
+onBeforeUnmount(() => {
+  window.removeEventListener("pointermove", handlePointerMove);
+  if (animationFrameId !== null) {
+    cancelAnimationFrame(animationFrameId);
+  }
+});
+
+function handlePointerMove(event: PointerEvent) {
+  if (animationFrameId !== null) {
+    return;
+  }
+
+  animationFrameId = requestAnimationFrame(() => {
+    pointer.value = {
+      x: (event.clientX / window.innerWidth) * 100,
+      y: (event.clientY / window.innerHeight) * 100,
+    };
+    animationFrameId = null;
+  });
+}
+
+function resetPointer() {
+  pointer.value = { x: 50, y: 50 };
+}
 
 async function loadNotes() {
   try {
@@ -160,14 +196,56 @@ async function handleMoveNote(id: string, newDate: string) {
 }
 
 .app-container {
+  position: relative;
   width: 100%;
   height: 100%;
-  background: rgba(255, 245, 250, 0);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.48),
+      rgba(255, 255, 255, 0.1)
+    ),
+    radial-gradient(
+      circle at var(--pointer-x) var(--pointer-y),
+      rgba(255, 255, 255, 0.82) 0%,
+      rgba(255, 255, 255, 0.3) 16%,
+      rgba(255, 255, 255, 0.12) 26%,
+      rgba(255, 255, 255, 0) 46%
+    );
+  backdrop-filter: blur(24px) saturate(150%) brightness(1.12);
+  -webkit-backdrop-filter: blur(24px) saturate(150%) brightness(1.12);
   border-radius: 20px;
   overflow: hidden;
-  box-shadow: 0 8px 32px rgba(219, 112, 147, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 18px 40px rgba(176, 126, 184, 0.12),
+    0 8px 22px rgba(124, 98, 150, 0.1);
+  transition:
+    background 220ms ease-out,
+    box-shadow 220ms ease-out,
+    border-color 220ms ease-out;
+  isolation: isolate;
+}
+
+.glass-glow {
+  position: absolute;
+  inset: -18% -12%;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at var(--pointer-x) var(--pointer-y),
+    rgba(255, 255, 255, 0.7) 0%,
+    rgba(255, 255, 255, 0.18) 18%,
+    rgba(255, 255, 255, 0) 42%
+  );
+  filter: blur(22px);
+  opacity: 0.96;
+  z-index: 0;
+}
+
+.app-container > * {
+  position: relative;
+  z-index: 1;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -177,7 +255,20 @@ async function handleMoveNote(id: string, newDate: string) {
   }
 
   .app-container {
-    background: rgba(60, 40, 60, 0);
+    background:
+      linear-gradient(135deg, rgba(72, 54, 86, 0.42), rgba(60, 40, 60, 0.08)),
+      radial-gradient(
+        circle at var(--pointer-x) var(--pointer-y),
+        rgba(255, 255, 255, 0.38) 0%,
+        rgba(255, 255, 255, 0.13) 18%,
+        rgba(255, 255, 255, 0.05) 30%,
+        rgba(255, 255, 255, 0) 52%
+      );
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.2),
+      0 18px 40px rgba(24, 18, 36, 0.18),
+      0 8px 22px rgba(70, 58, 84, 0.12);
   }
 }
 </style>

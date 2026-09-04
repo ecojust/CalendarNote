@@ -301,7 +301,7 @@ const calendarOptions = {
 } as any;
 
 watch(
-  () => props.notes,
+  () => props.notes.length,
   () => {
     const calendarApi = fullCalendarRef.value?.getApi();
     if (calendarApi) {
@@ -309,7 +309,6 @@ watch(
       calendarApi.addEventSource(calendarEvents.value);
     }
   },
-  { deep: true },
 );
 
 function handleContextMenu(event: Event) {
@@ -476,14 +475,27 @@ onUnmounted(() => {
 
 <style lang="less">
 .calendar-container {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
   padding: 0;
   background: transparent;
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
   overflow: hidden;
+}
+
+.calendar-container::before {
+  content: "";
+  position: absolute;
+  top: -20px;
+  left: -20px;
+  right: -20px;
+  bottom: -20px;
+  background: url(https://picsum.photos/1920/1080?random=1) center/cover
+    no-repeat fixed;
+  opacity: 0.3;
+  filter: blur(20px);
+  z-index: -1;
 }
 
 .titlebar {
@@ -664,7 +676,7 @@ onUnmounted(() => {
 .fc .fc-daygrid-day {
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.15);
-  transition: all 0.2s ease;
+  transition: background 0.2s ease;
   cursor: pointer;
 
   &:hover {

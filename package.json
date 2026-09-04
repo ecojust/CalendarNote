@@ -1,0 +1,37 @@
+{
+  "name": "CalendarNote",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "4dev": "tauri dev",
+    "logo": "tauri icon ./logo.png"
+  },
+  "dependencies": {
+    "@fullcalendar/core": "^6.1.21",
+    "@fullcalendar/daygrid": "^6.1.21",
+    "@fullcalendar/interaction": "^6.1.21",
+    "@fullcalendar/vue3": "^6.1.21",
+    "@tauri-apps/api": "^2.11.0",
+    "@tauri-apps/plugin-dialog": "^2.7.0",
+    "@tauri-apps/plugin-fs": "^2",
+    "@tauri-apps/plugin-sql": "^2.4.1",
+    "element-plus": "^2.11.1",
+    "sortablejs": "^1.15.7",
+    "vue": "^3.5.13",
+    "vue-router": "4"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.10.0",
+    "@types/sortablejs": "^1.15.9",
+    "@vitejs/plugin-vue": "^5.2.1",
+    "less": "^4.4.1",
+    "typescript": "~5.6.2",
+    "vite": "^6.0.3",
+    "vue-tsc": "^2.1.10"
+  }
+}

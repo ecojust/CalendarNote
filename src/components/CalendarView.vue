@@ -495,6 +495,7 @@ onUnmounted(() => {
     no-repeat fixed;
   opacity: 0.3;
   filter: blur(20px);
+  border-radius: 20px;
   z-index: -1;
 }
 
@@ -507,6 +508,8 @@ onUnmounted(() => {
   border-bottom: 1px solid rgba(255, 255, 255, 0.15);
   user-select: none;
   flex-shrink: 0;
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
 }
 
 .titlebar-title {

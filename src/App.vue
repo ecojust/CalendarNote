@@ -191,6 +191,8 @@ async function handleMoveNote(id: string, newDate: string) {
 #app {
   width: 100vw;
   height: 100vh;
+  border-radius: 20px;
+
   overflow: hidden;
   background: transparent;
 }
@@ -231,6 +233,8 @@ async function handleMoveNote(id: string, newDate: string) {
 .glass-glow {
   position: absolute;
   inset: -18% -12%;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 1);
   pointer-events: none;
   background: radial-gradient(
     circle at var(--pointer-x) var(--pointer-y),

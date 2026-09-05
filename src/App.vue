@@ -14,6 +14,9 @@
         @add-note="handleAddNote"
         @delete-note="handleDeleteNote"
         @move-note="handleMoveNote"
+        @update-note="handleUpdateNote"
+        @month-change="handleMonthChange"
+        @clear-month="handleClearMonth"
       />
     </div>
   </div>
@@ -38,9 +41,16 @@ interface Note {
 const notes = ref<Note[]>([]);
 const pointer = ref({ x: 50, y: 50 });
 let animationFrameId: number | null = null;
+let db: any = null;
+
+async function getDb() {
+  if (!db) {
+    db = await Database.load("sqlite:calendar.db");
+  }
+  return db;
+}
 
 onMounted(async () => {
-  await loadNotes();
   window.addEventListener("pointermove", handlePointerMove, { passive: true });
 });
 
@@ -69,32 +79,105 @@ function resetPointer() {
   pointer.value = { x: 50, y: 50 };
 }
 
-async function loadNotes() {
+async function loadNotes(start?: string, end?: string) {
+  if (!start || !end) {
+    const now = new Date();
+    const first = new Date(now.getFullYear(), now.getMonth(), 1);
+    const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    start = formatYmd(first);
+    end = formatYmd(next);
+  }
   try {
     // @ts-ignore
     if (window.__TAURI__) {
-      const db = await Database.load("sqlite:calendar.db");
+      const db = await getDb();
       notes.value = await db.select(
-        "SELECT * FROM notes ORDER BY created_at DESC",
+        "SELECT * FROM notes WHERE date >= $1 AND date < $2 ORDER BY created_at DESC",
+        [start, end],
       );
-      await db.close();
     } else {
       const stored = localStorage.getItem("calendar-notes");
-      if (stored) {
-        notes.value = JSON.parse(stored);
-      }
+      const all = stored ? JSON.parse(stored) : [];
+      notes.value = all.filter(
+        (n: Note) => n.date >= (start as string) && n.date < (end as string),
+      );
     }
   } catch (e) {
     console.error("Failed to load notes:", e);
   }
 }
 
-async function handleAddNote(note: Note) {
-  notes.value.unshift(note);
+async function handleUpdateNote(id: string, patch: Partial<Note>) {
+  const entries = Object.entries(patch);
+  if (entries.length === 0) return;
   try {
     // @ts-ignore
     if (window.__TAURI__) {
-      const db = await Database.load("sqlite:calendar.db");
+      const db = await getDb();
+      const setClause = entries
+        .map(([key], i) => `${key} = $${i + 1}`)
+        .join(", ");
+      const params = [...entries.map(([, v]) => v || null), id];
+      await db.execute(
+        `UPDATE notes SET ${setClause} WHERE id = $${entries.length + 1}`,
+        params,
+      );
+    } else {
+      localStorage.setItem(
+        "calendar-notes",
+        JSON.stringify(
+          notes.value.map((n) => (n.id === id ? { ...n, ...patch } : n)),
+        ),
+      );
+    }
+    notes.value = notes.value.map((n) =>
+      n.id === id ? { ...n, ...patch } : n,
+    );
+  } catch (e) {
+    console.error("Failed to update note:", e);
+  }
+}
+
+function handleMonthChange(start: string, end: string) {
+  loadNotes(start, end);
+}
+
+async function handleClearMonth(start: string, end: string) {
+  try {
+    // @ts-ignore
+    if (window.__TAURI__) {
+      const db = await getDb();
+      await db.execute("DELETE FROM notes WHERE date >= $1 AND date < $2", [
+        start,
+        end,
+      ]);
+    } else {
+      localStorage.setItem(
+        "calendar-notes",
+        JSON.stringify(
+          notes.value.filter((n) => n.date < start || n.date >= end),
+        ),
+      );
+    }
+    notes.value = notes.value.filter((n) => n.date < start || n.date >= end);
+  } catch (e) {
+    console.error("Failed to clear month:", e);
+  }
+}
+
+function formatYmd(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+async function handleAddNote(note: Note) {
+  notes.value = [note, ...notes.value];
+  try {
+    // @ts-ignore
+    if (window.__TAURI__) {
+      const db = await getDb();
       await db.execute(
         "INSERT INTO notes (id, title, content, date, color, reminder, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
         [
@@ -107,7 +190,6 @@ async function handleAddNote(note: Note) {
           note.created_at,
         ],
       );
-      await db.close();
     } else {
       localStorage.setItem("calendar-notes", JSON.stringify(notes.value));
     }
@@ -121,9 +203,8 @@ async function handleDeleteNote(id: string) {
   try {
     // @ts-ignore
     if (window.__TAURI__) {
-      const db = await Database.load("sqlite:calendar.db");
+      const db = await getDb();
       await db.execute("DELETE FROM notes WHERE id = $1", [id]);
-      await db.close();
     } else {
       localStorage.setItem("calendar-notes", JSON.stringify(notes.value));
     }
@@ -149,12 +230,11 @@ async function handleMoveNote(id: string, newDate: string) {
     try {
       // @ts-ignore
       if (window.__TAURI__) {
-        const db = await Database.load("sqlite:calendar.db");
+        const db = await getDb();
         await db.execute("UPDATE notes SET date = $1 WHERE id = $2", [
           newDate,
           id,
         ]);
-        await db.close();
       } else {
         localStorage.setItem("calendar-notes", JSON.stringify(notes.value));
       }

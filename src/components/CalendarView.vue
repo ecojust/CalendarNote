@@ -1,8 +1,49 @@
 <template>
   <div class="calendar-container">
-    <div class="titlebar" data-tauri-drag-region>
+    <div class="titlebar" :data-tauri-drag-region="isLocked ? 'false' : 'true'">
       <div class="titlebar-title">CalendarNote</div>
       <div class="titlebar-controls">
+        <button
+          class="titlebar-btn"
+          id="titlebar-pin"
+          :class="{ locked: isLocked }"
+          :title="isLocked ? '解锁窗口' : '锁定窗口'"
+          @click="toggleLock"
+          data-tauri-drag-region="false"
+        >
+          <svg
+            v-if="!isLocked"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <line x1="12" x2="12" y1="17" y2="22" />
+            <path
+              d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"
+            />
+          </svg>
+          <svg
+            v-else
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"
+            />
+            <line x1="12" x2="12" y1="17" y2="22" />
+          </svg>
+        </button>
         <button
           class="titlebar-btn"
           id="titlebar-minimize"
@@ -110,6 +151,43 @@
           <circle cx="12" cy="12" r="2" />
         </svg>
       </button>
+      <button
+        class="toolbar-btn"
+        :class="{ danger: clearConfirm }"
+        :title="
+          clearConfirm ? '再次点击确认清除当月便签' : '清除当前月所有便签'
+        "
+        @click="toggleClearMonth"
+      >
+        <svg
+          v-if="!clearConfirm"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M3 6h18" />
+          <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+        </svg>
+        <svg
+          v-else
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+      </button>
     </div>
 
     <FullCalendar ref="fullCalendarRef" :options="calendarOptions" />
@@ -121,9 +199,9 @@
       :style="{ left: contextMenu.x + 'px', top: contextMenu.y + 'px' }"
     >
       <div class="context-menu-item" @click="openAddNoteDialog">
-        <svg width="14" height="14" viewBox="0 0 14 14">
+        <svg width="12" height="12" viewBox="0 0 12 12">
           <path
-            d="M7 2V12M2 7H12"
+            d="M6 1v10M1 6h10"
             stroke="currentColor"
             stroke-width="1.5"
             stroke-linecap="round"
@@ -238,10 +316,16 @@
           </div>
           <div class="detail-item">
             <label>颜色</label>
-            <div
-              class="detail-color"
-              :style="{ backgroundColor: selectedNote.color }"
-            ></div>
+            <div class="color-options">
+              <div
+                v-for="color in colors"
+                :key="color"
+                class="color-option"
+                :class="{ active: selectedNote.color === color }"
+                :style="{ backgroundColor: color }"
+                @click="updateNoteColor(color)"
+              ></div>
+            </div>
           </div>
         </div>
         <div class="dialog-footer">
@@ -253,7 +337,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
 import FullCalendar from "@fullcalendar/vue3";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
@@ -278,11 +362,17 @@ const emit = defineEmits<{
   (e: "add-note", note: Note): void;
   (e: "delete-note", id: string): void;
   (e: "move-note", id: string, newDate: string): void;
+  (e: "update-note", id: string, patch: Partial<Note>): void;
+  (e: "month-change", start: string, end: string): void;
+  (e: "clear-month", start: string, end: string): void;
 }>();
 
 const fullCalendarRef = ref<InstanceType<typeof FullCalendar>>();
 const isMaximized = ref(false);
+const isLocked = ref(localStorage.getItem("calendar-locked") === "1");
 const currentTitle = ref("");
+const currentRange = ref({ start: "", end: "" });
+const clearConfirm = ref(false);
 
 const contextMenu = ref({
   visible: false,
@@ -354,7 +444,7 @@ const calendarOptions = {
 } as any;
 
 watch(
-  () => props.notes.length,
+  () => props.notes,
   () => {
     const calendarApi = fullCalendarRef.value?.getApi();
     if (calendarApi) {
@@ -372,19 +462,59 @@ function handleContextMenu(event: Event) {
     const dateAttr = dayCell.getAttribute("data-date");
     if (dateAttr) {
       event.preventDefault();
-      contextMenu.value = {
-        visible: true,
-        x: mouseEvent.clientX,
-        y: mouseEvent.clientY,
-        date: dateAttr,
-      };
+      openContextMenu(mouseEvent.clientX, mouseEvent.clientY, dateAttr);
     }
   }
+}
+
+function openContextMenu(x: number, y: number, date: string) {
+  contextMenu.value = { visible: true, x, y, date };
+  nextTick(() => {
+    const el = document.querySelector<HTMLElement>(".context-menu");
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    let nextX = x;
+    let nextY = y;
+    if (nextX + rect.width > window.innerWidth - 8) {
+      nextX = window.innerWidth - rect.width - 8;
+    }
+    if (nextY + rect.height > window.innerHeight - 8) {
+      nextY = window.innerHeight - rect.height - 8;
+    }
+    if (nextX !== x || nextY !== y) {
+      contextMenu.value = { ...contextMenu.value, x: nextX, y: nextY };
+    }
+  });
 }
 
 function handleDatesSet(arg: any) {
   const d = arg.view.currentStart;
   currentTitle.value = `${d.getFullYear()}年${d.getMonth() + 1}月`;
+  currentRange.value = {
+    start: formatYmd(arg.view.currentStart),
+    end: formatYmd(arg.view.currentEnd),
+  };
+  clearConfirm.value = false;
+  emit("month-change", currentRange.value.start, currentRange.value.end);
+}
+
+function toggleClearMonth() {
+  if (!clearConfirm.value) {
+    clearConfirm.value = true;
+    window.setTimeout(() => {
+      clearConfirm.value = false;
+    }, 3000);
+  } else {
+    emit("clear-month", currentRange.value.start, currentRange.value.end);
+    clearConfirm.value = false;
+  }
+}
+
+function formatYmd(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 function prevMonth() {
@@ -399,12 +529,19 @@ function goToday() {
   fullCalendarRef.value?.getApi().today();
 }
 
+const dayCellCache = new Map<string, string>();
+
 function handleDayCellContent(arg: any) {
-  const solar = Solar.fromYmd(
-    arg.date.getFullYear(),
-    arg.date.getMonth() + 1,
-    arg.date.getDate(),
-  );
+  const y = arg.date.getFullYear();
+  const m = arg.date.getMonth() + 1;
+  const d = arg.date.getDate();
+  const key = `${y}-${m}-${d}`;
+  const cached = dayCellCache.get(key);
+  if (cached) {
+    return { html: cached };
+  }
+
+  const solar = Solar.fromYmd(y, m, d);
   const lunar = solar.getLunar();
 
   const jieQi = lunar.getJieQi();
@@ -434,14 +571,15 @@ function handleDayCellContent(arg: any) {
       ? '<span class="fc-day-lunar festival">' + bottomText + "</span>"
       : '<span class="fc-day-lunar">' + bottomText + "</span>";
 
-  return {
-    html:
-      '<div class="fc-daygrid-day-number">' +
-      arg.dayNumberText +
-      "</div>" +
-      extra +
-      tag,
-  };
+  const html =
+    '<div class="fc-daygrid-day-number">' +
+    arg.dayNumberText +
+    "</div>" +
+    extra +
+    tag;
+
+  dayCellCache.set(key, html);
+  return { html };
 }
 
 function handleEventDrop(info: any) {
@@ -520,6 +658,12 @@ function openAddNoteDialog() {
   hideContextMenu();
 }
 
+function updateNoteColor(color: string) {
+  if (!selectedNote.value) return;
+  selectedNote.value.color = color;
+  emit("update-note", selectedNote.value.id, { color });
+}
+
 function closeAddDialog() {
   showAddDialog.value = false;
   newNote.value = {
@@ -565,6 +709,11 @@ async function toggleMaximize() {
   const { getCurrentWindow } = await import("@tauri-apps/api/window");
   await getCurrentWindow().toggleMaximize();
   isMaximized.value = !isMaximized.value;
+}
+
+function toggleLock() {
+  isLocked.value = !isLocked.value;
+  localStorage.setItem("calendar-locked", isLocked.value ? "1" : "0");
 }
 
 async function close() {
@@ -720,8 +869,8 @@ onUnmounted(() => {
   gap: 16px;
   padding: 12px 16px 8px;
 
-  margin-bottom: 220px;
   flex-shrink: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .fc .fc-header-toolbar {
@@ -750,8 +899,23 @@ onUnmounted(() => {
     background: rgba(255, 255, 255, 0.15);
   }
 
+  &.danger {
+    color: #ff5f5f;
+    background: rgba(255, 95, 95, 0.25);
+    animation: dangerPulse 0.8s ease-in-out infinite alternate;
+  }
+
   &:active {
     transform: scale(0.85);
+  }
+}
+
+@keyframes dangerPulse {
+  from {
+    box-shadow: 0 0 0 rgba(255, 95, 95, 0.4);
+  }
+  to {
+    box-shadow: 0 0 12px rgba(255, 95, 95, 0.9);
   }
 }
 
@@ -853,7 +1017,7 @@ onUnmounted(() => {
 .fc .fc-daygrid-day.fc-day-today {
   background: transparent;
   // border: 2px solid #ff6b9d;
-  box-shadow: 0 0 20px 3px rgba(107, 179, 255, 0.92) inset;
+  box-shadow: 0px 0 20px 3px rgba(107, 179, 255, 0.92) inset;
 }
 
 .fc .fc-daygrid-day-number {
@@ -918,9 +1082,10 @@ onUnmounted(() => {
 .fc .fc-daygrid-event {
   border-radius: 999px !important;
   border: 1px solid rgba(255, 255, 255, 0.6) !important;
-  padding: 3px 8px !important;
-  margin: 2px 4px !important;
-  font-size: 11px !important;
+  padding: 1px 6px !important;
+  margin: 1px 4px !important;
+  font-size: 10px !important;
+  line-height: 14px !important;
   font-weight: 700;
   color: white !important;
   cursor: grab !important;
@@ -953,7 +1118,7 @@ onUnmounted(() => {
 }
 
 .fc .fc-daygrid-event-harness {
-  margin-top: 2px;
+  margin-top: 1px;
 }
 
 .fc .fc-event {
@@ -976,6 +1141,83 @@ onUnmounted(() => {
 
   &:hover {
     background: rgba(255, 255, 255, 0.35);
+  }
+}
+
+/* 更多弹窗 */
+.fc .fc-more-popover {
+  background: rgba(255, 255, 255, 1);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  animation: morePopoverIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  .fc-popover-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: rgba(255, 255, 255, 0.15);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+
+    .fc-popover-title {
+      color: black;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .fc-popover-close {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      color: black;
+      background: rgba(255, 255, 255, 0.15);
+      font-size: 14px;
+      line-height: 1;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background: #ff6b6b;
+        color: white;
+        transform: rotate(90deg);
+      }
+    }
+  }
+
+  .fc-popover-body {
+    padding: 0 10px 10px;
+    min-width: 220px;
+    max-height: 300px;
+    overflow-y: auto;
+
+    .fc-more-popover-misc {
+      display: none;
+    }
+
+    .fc-daygrid-event {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+      margin-bottom: 6px;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+  }
+}
+
+@keyframes morePopoverIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
   }
 }
 
@@ -1025,28 +1267,45 @@ onUnmounted(() => {
 /* 右键菜单 */
 .context-menu {
   position: fixed;
-  background: rgba(255, 255, 255, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 12px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
-  padding: 6px;
+  background: rgba(255, 255, 255, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 10px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+  padding: 4px;
   z-index: 1000;
-  min-width: 140px;
+  min-width: 120px;
+  animation: contextMenuIn 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: top left;
 }
 
 .context-menu-item {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 14px;
-  border-radius: 8px;
+  padding: 7px 12px;
+  border-radius: 7px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
   color: white;
   transition: all 0.2s ease;
 
+  svg {
+    flex-shrink: 0;
+  }
+
   &:hover {
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.18);
+  }
+}
+
+@keyframes contextMenuIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translate(-4px, -4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translate(0, 0);
   }
 }
 
@@ -1062,7 +1321,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2000;
+  z-index: 2000000;
 }
 
 .dialog {
@@ -1266,13 +1525,5 @@ onUnmounted(() => {
   padding: 10px 12px;
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.detail-color {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.5);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
 }
 </style>

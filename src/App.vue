@@ -213,11 +213,11 @@ async function handleMoveNote(id: string, newDate: string) {
       rgba(255, 255, 255, 0.12) 26%,
       rgba(255, 255, 255, 0) 46%
     );
-  backdrop-filter: blur(24px) saturate(150%) brightness(1.12);
-  -webkit-backdrop-filter: blur(24px) saturate(150%) brightness(1.12);
+  backdrop-filter: blur(0px) saturate(150%) brightness(1.12);
+  -webkit-backdrop-filter: blur(0px) saturate(150%) brightness(1.12);
   border-radius: 20px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 0px solid rgba(255, 255, 255, 0);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.14),
     inset 0 -1px 0 rgba(255, 255, 255, 0.05),

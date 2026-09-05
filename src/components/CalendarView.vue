@@ -208,6 +208,7 @@ import FullCalendar from "@fullcalendar/vue3";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import type { EventInput } from "@fullcalendar/core";
+import { Solar, HolidayUtil } from "lunar-typescript";
 
 interface Note {
   id: string;
@@ -294,6 +295,7 @@ const calendarOptions = {
   editable: true,
   selectable: true,
   selectMirror: true,
+  dayCellContent: handleDayCellContent,
   eventDrop: handleEventDrop,
   eventClick: handleEventClick,
   eventDidMount: handleEventMount,
@@ -327,6 +329,51 @@ function handleContextMenu(event: Event) {
       };
     }
   }
+}
+
+function handleDayCellContent(arg: any) {
+  const solar = Solar.fromYmd(
+    arg.date.getFullYear(),
+    arg.date.getMonth() + 1,
+    arg.date.getDate(),
+  );
+  const lunar = solar.getLunar();
+
+  const jieQi = lunar.getJieQi();
+  const festivals = [...lunar.getFestivals(), ...solar.getFestivals()];
+
+  let bottomText = "";
+  if (jieQi) {
+    bottomText = jieQi;
+  } else if (festivals.length > 0) {
+    bottomText = festivals[0];
+  } else if (lunar.getDay() === 1) {
+    bottomText = lunar.getMonthInChinese();
+  } else {
+    bottomText = lunar.getDayInChinese();
+  }
+
+  const holiday = HolidayUtil.getHoliday(solar.toYmd());
+  const tag =
+    holiday && holiday.isWork()
+      ? '<span class="fc-day-holiday-tag work">班</span>'
+      : holiday
+        ? '<span class="fc-day-holiday-tag rest">休</span>'
+        : "";
+
+  const extra =
+    jieQi || festivals.length > 0
+      ? '<span class="fc-day-lunar festival">' + bottomText + "</span>"
+      : '<span class="fc-day-lunar">' + bottomText + "</span>";
+
+  return {
+    html:
+      '<div class="fc-daygrid-day-number">' +
+      arg.dayNumberText +
+      "</div>" +
+      extra +
+      tag,
+  };
 }
 
 function handleEventDrop(info: any) {
@@ -494,7 +541,7 @@ onUnmounted(() => {
   bottom: -20px;
   background: url(https://picsum.photos/1920/1080?random=1) center/cover
     no-repeat fixed;
-  opacity: 0.3;
+  opacity: 1.9;
   filter: blur(20px);
   border-radius: 20px;
   z-index: -1;
@@ -510,7 +557,7 @@ onUnmounted(() => {
     rgba(255, 255, 255, 0.06),
     rgba(255, 255, 255, 0)
   );
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.8);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
   user-select: none;
   flex-shrink: 0;
@@ -559,6 +606,9 @@ onUnmounted(() => {
   background: transparent;
   display: flex;
   flex-direction: column;
+  * {
+    border-width: 0 !important;
+  }
 }
 
 .fc .fc-scrollgrid > tbody .fc-scrollgrid-section > td {
@@ -631,7 +681,6 @@ onUnmounted(() => {
   box-shadow: none !important;
   border-radius: 12px;
   overflow: hidden;
-  margin: 0 12px 12px;
   flex: 1;
   min-height: 0;
 }
@@ -670,8 +719,7 @@ onUnmounted(() => {
 }
 .fc .fc-col-header-cell {
   background: transparent;
-  border: none;
-  border-bottom: 1px solid rgba(255, 255, 255, 0);
+  border-width: 2px !important;
   padding: 8px 0;
 
   .fc-col-header-cell-cushion {
@@ -688,7 +736,7 @@ onUnmounted(() => {
 
 .fc .fc-daygrid-day {
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-width: 2px !important;
   transition: background 0.2s ease;
   cursor: pointer;
 
@@ -699,8 +747,8 @@ onUnmounted(() => {
 
 .fc .fc-daygrid-day.fc-day-today {
   background: transparent;
-  border: 2px solid #ff6b9d;
-  box-shadow: 0 0 0 3px rgba(255, 107, 157, 0.2);
+  // border: 2px solid #ff6b9d;
+  box-shadow: 0 0 20px 3px rgba(255, 107, 157, 0.92) inset;
 }
 
 .fc .fc-daygrid-day-number {
@@ -715,6 +763,42 @@ onUnmounted(() => {
 
   &:hover {
     color: #ff6b9d;
+  }
+}
+
+.fc-day-lunar {
+  display: block;
+  text-align: center;
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.6);
+  padding: 0 4px 2px;
+  line-height: 1.2;
+  overflow: hidden;
+  white-space: nowrap;
+
+  &.festival {
+    color: #ffdce8;
+    font-weight: 600;
+  }
+}
+
+.fc-day-holiday-tag {
+  display: inline-block;
+  margin: 1px auto;
+  padding: 0 4px;
+  border-radius: 3px;
+  font-size: 9px;
+  line-height: 14px;
+  color: white;
+  font-weight: 600;
+  vertical-align: top;
+
+  &.rest {
+    background: rgba(255, 107, 157, 0.85);
+  }
+
+  &.work {
+    background: rgba(79, 172, 254, 0.85);
   }
 }
 

@@ -62,6 +62,56 @@
       </div>
     </div>
 
+    <div class="calendar-toolbar">
+      <button class="toolbar-btn" title="上一月" @click="prevMonth">
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <polyline points="15 18 9 12 15 6" />
+        </svg>
+      </button>
+      <div class="toolbar-title">{{ currentTitle }}</div>
+      <button class="toolbar-btn" title="下一月" @click="nextMonth">
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
+      </button>
+      <button class="toolbar-btn" title="回到今天" @click="goToday">
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="4" x2="12" y2="8" />
+          <line x1="12" y1="16" x2="12" y2="20" />
+          <line x1="4" y1="12" x2="8" y2="12" />
+          <line x1="16" y1="12" x2="20" y2="12" />
+          <circle cx="12" cy="12" r="2" />
+        </svg>
+      </button>
+    </div>
+
     <FullCalendar ref="fullCalendarRef" :options="calendarOptions" />
 
     <!-- 右键菜单 -->
@@ -232,6 +282,7 @@ const emit = defineEmits<{
 
 const fullCalendarRef = ref<InstanceType<typeof FullCalendar>>();
 const isMaximized = ref(false);
+const currentTitle = ref("");
 
 const contextMenu = ref({
   visible: false,
@@ -246,19 +297,19 @@ const selectedNote = ref<Note | null>(null);
 const newNote = ref({
   title: "",
   content: "",
-  color: "#ff9a9e",
+  color: "#ff5f8f",
   reminder: "",
 });
 
 const colors = [
-  "#ff9a9e",
-  "#fad0c4",
-  "#ffecd2",
-  "#fcb69f",
-  "#a18cd1",
-  "#fbc2eb",
-  "#a6c1ee",
-  "#84fab0",
+  "#ff5f8f",
+  "#ff8a5c",
+  "#ffc53d",
+  "#ff6fb0",
+  "#7c5cff",
+  "#3dd6ff",
+  "#3ce0a8",
+  "#ff4d6d",
 ];
 
 const calendarEvents = computed<EventInput[]>(() => {
@@ -282,8 +333,8 @@ const calendarOptions = {
   firstDay: 0,
   height: "100%",
   headerToolbar: {
-    left: "prev,next today",
-    center: "title",
+    left: "",
+    center: "",
     right: "",
   },
   buttonText: {
@@ -299,7 +350,7 @@ const calendarOptions = {
   eventDrop: handleEventDrop,
   eventClick: handleEventClick,
   eventDidMount: handleEventMount,
-  datesSet: () => {},
+  datesSet: handleDatesSet,
 } as any;
 
 watch(
@@ -329,6 +380,23 @@ function handleContextMenu(event: Event) {
       };
     }
   }
+}
+
+function handleDatesSet(arg: any) {
+  const d = arg.view.currentStart;
+  currentTitle.value = `${d.getFullYear()}年${d.getMonth() + 1}月`;
+}
+
+function prevMonth() {
+  fullCalendarRef.value?.getApi().prev();
+}
+
+function nextMonth() {
+  fullCalendarRef.value?.getApi().next();
+}
+
+function goToday() {
+  fullCalendarRef.value?.getApi().today();
 }
 
 function handleDayCellContent(arg: any) {
@@ -429,7 +497,8 @@ function handleEventMount(info: any) {
 
   const deleteBtn = document.createElement("div");
   deleteBtn.className = "event-delete-btn";
-  deleteBtn.innerHTML = "×";
+  deleteBtn.innerHTML =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8" width="8" height="8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1.5 1.5l5 5M6.5 1.5l-5 5"/></svg>';
   deleteBtn.addEventListener("click", (e) => {
     e.stopPropagation();
     emit("delete-note", info.event.id);
@@ -456,7 +525,7 @@ function closeAddDialog() {
   newNote.value = {
     title: "",
     content: "",
-    color: "#ff9a9e",
+    color: "#ff5f8f",
     reminder: "",
   };
 }
@@ -616,13 +685,6 @@ onUnmounted(() => {
   box-shadow: none !important;
 }
 
-.fc .fc-toolbar-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: white;
-  text-shadow: 0 2px 8px rgba(214, 51, 132, 0.3);
-}
-
 .fc .fc-button {
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.3);
@@ -650,14 +712,57 @@ onUnmounted(() => {
   }
 }
 
-.fc .fc-toolbar {
+/* 自定义日历 toolbar */
+.calendar-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
   padding: 12px 16px 8px;
-  gap: 8px;
+
+  margin-bottom: 220px;
+  flex-shrink: 0;
 }
 
-.fc .fc-toolbar-chunk {
-  display: flex;
-  gap: 6px;
+.fc .fc-header-toolbar {
+  display: none;
+}
+
+.fc .fc-col-header {
+  border-top: 20px solid red;
+}
+
+.toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: white;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.15);
+  }
+
+  &:active {
+    transform: scale(0.85);
+  }
+}
+
+.toolbar-title {
+  min-width: 120px;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 700;
+  color: white;
+  text-shadow: 0 2px 8px rgba(214, 51, 132, 0.3);
+  user-select: none;
 }
 
 .fc .fc-view-harness {
@@ -748,7 +853,7 @@ onUnmounted(() => {
 .fc .fc-daygrid-day.fc-day-today {
   background: transparent;
   // border: 2px solid #ff6b9d;
-  box-shadow: 0 0 20px 3px rgba(255, 107, 157, 0.92) inset;
+  box-shadow: 0 0 20px 3px rgba(107, 179, 255, 0.92) inset;
 }
 
 .fc .fc-daygrid-day-number {
@@ -811,19 +916,44 @@ onUnmounted(() => {
 }
 
 .fc .fc-daygrid-event {
-  border-radius: 6px !important;
-  border: none !important;
-  padding: 2px 6px !important;
-  margin: 1px 3px !important;
-  font-size: 10px !important;
-  font-weight: 500;
+  border-radius: 999px !important;
+  border: 1px solid rgba(255, 255, 255, 0.6) !important;
+  padding: 3px 8px !important;
+  margin: 2px 4px !important;
+  font-size: 11px !important;
+  font-weight: 700;
   color: white !important;
   cursor: grab !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
   transition: box-shadow 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
+  }
+
+  &.fc-event-dragging {
+    opacity: 0.85;
+  }
+
+  .fc-event-main {
+    color: white !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  }
+
+  .fc-event-time {
+    display: none;
+  }
+}
+
+.fc .fc-daygrid-event .fc-event-title::before {
+  content: "✦";
+  margin-right: 4px;
+  font-size: 8px;
+  opacity: 0.9;
 }
 
 .fc .fc-daygrid-event-harness {
-  margin-top: 1px;
+  margin-top: 2px;
 }
 
 .fc .fc-event {
@@ -836,14 +966,16 @@ onUnmounted(() => {
 
 .fc .fc-more-link {
   color: white !important;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 10px;
-  padding: 2px 6px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.15);
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 
   &:hover {
-    background: rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.35);
   }
 }
 
@@ -856,9 +988,6 @@ onUnmounted(() => {
   border-radius: 50%;
   background: #ff6b6b;
   color: white;
-  font-size: 10px;
-  line-height: 14px;
-  text-align: center;
   cursor: pointer;
   opacity: 0;
   transition:
@@ -868,6 +997,11 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   z-index: 10;
+
+  svg {
+    display: block;
+    flex-shrink: 0;
+  }
 
   &:hover {
     background: #ff4757;
@@ -1019,7 +1153,7 @@ onUnmounted(() => {
 
     &:focus {
       outline: none;
-      border-color: #ff9a9e;
+      border-color: #ff5f8f;
       box-shadow: 0 0 0 3px rgba(255, 154, 158, 0.15);
     }
 

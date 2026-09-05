@@ -52,17 +52,17 @@ const emit = defineEmits<{
 }>();
 
 const content = ref("");
-const selectedColor = ref("#ff9a9e");
+const selectedColor = ref("#ff5f8f");
 
 const colors = [
-  "#ff9a9e",
-  "#fad0c4",
-  "#ffecd2",
-  "#fcb69f",
-  "#ff9a9e",
-  "#a18cd1",
-  "#fbc2eb",
-  "#a6c1ee",
+  "#ff5f8f",
+  "#ff8a5c",
+  "#ffc53d",
+  "#ff6fb0",
+  "#7c5cff",
+  "#3dd6ff",
+  "#3ce0a8",
+  "#ff4d6d",
 ];
 
 function handleSubmit() {

@@ -11,12 +11,14 @@
       <div class="glass-glow" aria-hidden="true" />
       <CalendarView
         :notes="notes"
+        :config="config"
         @add-note="handleAddNote"
         @delete-note="handleDeleteNote"
         @move-note="handleMoveNote"
         @update-note="handleUpdateNote"
         @month-change="handleMonthChange"
         @clear-month="handleClearMonth"
+        @update-config="handleConfigChange"
       />
     </div>
   </div>
@@ -39,6 +41,7 @@ interface Note {
 }
 
 const notes = ref<Note[]>([]);
+const config = ref<Record<string, string>>({});
 const pointer = ref({ x: 50, y: 50 });
 let animationFrameId: number | null = null;
 let db: any = null;
@@ -52,6 +55,7 @@ async function getDb() {
 
 onMounted(async () => {
   window.addEventListener("pointermove", handlePointerMove, { passive: true });
+  await loadConfig();
 });
 
 onBeforeUnmount(() => {
@@ -104,6 +108,43 @@ async function loadNotes(start?: string, end?: string) {
     }
   } catch (e) {
     console.error("Failed to load notes:", e);
+  }
+}
+
+async function loadConfig() {
+  try {
+    // @ts-ignore
+    if (window.__TAURI__) {
+      const db = await getDb();
+      const rows = (await db.select(
+        "SELECT key, value FROM config",
+      )) as { key: string; value: string }[];
+      config.value = Object.fromEntries(rows.map((r) => [r.key, r.value]));
+    } else {
+      config.value = {
+        "bg-blur": localStorage.getItem("calendar-bg-blur") ?? "20",
+      };
+    }
+  } catch (e) {
+    console.error("Failed to load config:", e);
+  }
+}
+
+async function handleConfigChange(key: string, value: string) {
+  config.value = { ...config.value, [key]: value };
+  try {
+    // @ts-ignore
+    if (window.__TAURI__) {
+      const db = await getDb();
+      await db.execute(
+        "INSERT INTO config (key, value) VALUES ($1, $2) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+        [key, value],
+      );
+    } else {
+      localStorage.setItem("calendar-" + key, value);
+    }
+  } catch (e) {
+    console.error("Failed to save config:", e);
   }
 }
 

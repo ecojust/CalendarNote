@@ -1,5 +1,8 @@
 <template>
-  <div class="calendar-container">
+  <div
+    class="calendar-container"
+    :style="{ '--bg-blur': bgBlur + 'px', '--bg-image': `url('${wallpaperBg}')` }"
+  >
     <div class="titlebar" :data-tauri-drag-region="isLocked ? 'false' : 'true'">
       <div class="titlebar-title">CalendarNote</div>
       <div class="titlebar-controls">
@@ -46,6 +49,30 @@
         </button>
         <button
           class="titlebar-btn"
+          id="titlebar-settings"
+          title="设置"
+          @click="openSettingsDialog"
+          data-tauri-drag-region="false"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
+            />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+        </button>
+        <!-- 最小化/最大化已暂禁用
+        <button
+          class="titlebar-btn"
           id="titlebar-minimize"
           @click="minimize"
           data-tauri-drag-region="false"
@@ -86,6 +113,7 @@
             />
           </svg>
         </button>
+        -->
         <button
           class="titlebar-btn"
           id="titlebar-close"
@@ -333,6 +361,64 @@
         </div>
       </div>
     </div>
+
+    <!-- 设置弹窗 -->
+    <div
+      v-if="showSettingsDialog"
+      class="dialog-overlay"
+      @click="closeSettingsDialog"
+    >
+      <div class="dialog" @click.stop>
+        <div class="dialog-header">
+          <h3>设置</h3>
+          <button class="dialog-close" @click="closeSettingsDialog">
+            <svg width="14" height="14" viewBox="0 0 14 14">
+              <path
+                d="M2 2l10 10M12 2l-10 10"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+              />
+            </svg>
+          </button>
+        </div>
+        <div class="dialog-body">
+          <div class="form-group">
+            <label>壁纸</label>
+            <div class="wallpaper-row">
+              <div
+                class="wallpaper-preview"
+                :style="{ backgroundImage: `url('${wallpaperBg}')` }"
+              ></div>
+              <div class="wallpaper-actions">
+                <button
+                  class="btn-mini"
+                  :disabled="updatingWallpaper"
+                  @click="updateWallpaper"
+                >
+                  {{ updatingWallpaper ? "下载中…" : "更新壁纸" }}
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>背景模糊度（{{ bgBlur }}px）</label>
+            <input
+              v-model.number="bgBlur"
+              type="range"
+              min="0"
+              max="40"
+              step="1"
+              class="blur-slider"
+            />
+          </div>
+        </div>
+        <div class="dialog-footer">
+          <button class="btn-cancel" @click="bgBlur = 20">恢复默认</button>
+          <button class="btn-confirm" @click="closeSettingsDialog">完成</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -356,6 +442,7 @@ interface Note {
 
 const props = defineProps<{
   notes: Note[];
+  config?: Record<string, string>;
 }>();
 
 const emit = defineEmits<{
@@ -365,14 +452,106 @@ const emit = defineEmits<{
   (e: "update-note", id: string, patch: Partial<Note>): void;
   (e: "month-change", start: string, end: string): void;
   (e: "clear-month", start: string, end: string): void;
+  (e: "update-config", key: string, value: string): void;
 }>();
 
 const fullCalendarRef = ref<InstanceType<typeof FullCalendar>>();
-const isMaximized = ref(false);
 const isLocked = ref(localStorage.getItem("calendar-locked") === "1");
 const currentTitle = ref("");
 const currentRange = ref({ start: "", end: "" });
 const clearConfirm = ref(false);
+const showSettingsDialog = ref(false);
+const bgBlur = ref(
+  props.config?.["bg-blur"] != null
+    ? Number(props.config["bg-blur"])
+    : Number(localStorage.getItem("calendar-bg-blur") ?? 20),
+);
+const defaultWallpaper = "https://picsum.photos/1920/1080?random=1";
+const wallpaper = ref(
+  props.config?.["wallpaper"] != null
+    ? props.config["wallpaper"]
+    : localStorage.getItem("calendar-wallpaper") ?? "",
+);
+const wallpaperBg = ref(defaultWallpaper);
+const updatingWallpaper = ref(false);
+
+async function applyWallpaper(pathOrData: string) {
+  if (!pathOrData) {
+    wallpaperBg.value = defaultWallpaper;
+    return;
+  }
+  if (pathOrData.startsWith("data:") || pathOrData.startsWith("http")) {
+    wallpaperBg.value = pathOrData;
+    return;
+  }
+  // @ts-ignore
+  if (window.__TAURI__) {
+    try {
+      const { convertFileSrc } = await import("@tauri-apps/api/core");
+      wallpaperBg.value = convertFileSrc(pathOrData);
+    } catch (e) {
+      console.error("Failed to load wallpaper:", e);
+      wallpaperBg.value = defaultWallpaper;
+    }
+  } else {
+    wallpaperBg.value = defaultWallpaper;
+  }
+}
+
+function readFileAsDataURL(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function updateWallpaper() {
+  if (updatingWallpaper.value) return;
+  updatingWallpaper.value = true;
+  try {
+    // @ts-ignore
+    if (window.__TAURI__) {
+      const { invoke } = await import("@tauri-apps/api/core");
+      wallpaper.value = await invoke<string>("download_wallpaper", {
+        url: defaultWallpaper,
+      });
+    } else {
+      const res = await fetch(defaultWallpaper);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      wallpaper.value = await readFileAsDataURL(await res.blob());
+    }
+  } catch (e) {
+    console.error("Failed to update wallpaper:", e);
+  } finally {
+    updatingWallpaper.value = false;
+  }
+}
+
+watch(bgBlur, (value) => {
+  localStorage.setItem("calendar-bg-blur", String(value));
+  emit("update-config", "bg-blur", String(value));
+});
+
+watch(wallpaper, (value) => {
+  localStorage.setItem("calendar-wallpaper", value);
+  applyWallpaper(value);
+  emit("update-config", "wallpaper", value);
+});
+
+watch(
+  () => props.config,
+  (cfg) => {
+    if (cfg?.["bg-blur"] != null) {
+      bgBlur.value = Number(cfg["bg-blur"]);
+    }
+    if (cfg?.["wallpaper"] != null) {
+      wallpaper.value = cfg["wallpaper"];
+    }
+  },
+  { immediate: true },
+);
 
 const contextMenu = ref({
   visible: false,
@@ -658,6 +837,14 @@ function openAddNoteDialog() {
   hideContextMenu();
 }
 
+function openSettingsDialog() {
+  showSettingsDialog.value = true;
+}
+
+function closeSettingsDialog() {
+  showSettingsDialog.value = false;
+}
+
 function updateNoteColor(color: string) {
   if (!selectedNote.value) return;
   selectedNote.value.color = color;
@@ -700,16 +887,17 @@ function addNote() {
   closeAddDialog();
 }
 
-async function minimize() {
-  const { getCurrentWindow } = await import("@tauri-apps/api/window");
-  await getCurrentWindow().minimize();
-}
-
-async function toggleMaximize() {
-  const { getCurrentWindow } = await import("@tauri-apps/api/window");
-  await getCurrentWindow().toggleMaximize();
-  isMaximized.value = !isMaximized.value;
-}
+// 最小化/最大化已暂禁用（按钮已注释）
+// async function minimize() {
+//   const { getCurrentWindow } = await import("@tauri-apps/api/window");
+//   await getCurrentWindow().minimize();
+// }
+//
+// async function toggleMaximize() {
+//   const { getCurrentWindow } = await import("@tauri-apps/api/window");
+//   await getCurrentWindow().toggleMaximize();
+//   isMaximized.value = !isMaximized.value;
+// }
 
 function toggleLock() {
   isLocked.value = !isLocked.value;
@@ -757,10 +945,10 @@ onUnmounted(() => {
   left: -20px;
   right: -20px;
   bottom: -20px;
-  background: url(https://picsum.photos/1920/1080?random=1) center/cover
-    no-repeat fixed;
+  background: var(--bg-image, url(https://picsum.photos/1920/1080?random=1))
+    center/cover no-repeat fixed;
   opacity: 1.9;
-  filter: blur(20px);
+  filter: blur(var(--bg-blur, 20px));
   border-radius: 20px;
   z-index: -1;
 }
@@ -1430,6 +1618,56 @@ onUnmounted(() => {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.blur-slider {
+  width: 100%;
+  accent-color: #ff5f8f;
+  cursor: pointer;
+}
+
+.wallpaper-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.wallpaper-preview {
+  width: 120px;
+  height: 68px;
+  border-radius: 10px;
+  background-size: cover;
+  background-position: center;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.wallpaper-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.btn-mini {
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+  background: rgba(255, 95, 143, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 95, 143, 0.5);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
 }
 
 .color-option {

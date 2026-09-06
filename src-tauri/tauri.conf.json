@@ -15,8 +15,8 @@
     "windows": [
       {
         "title": "CalendarNote",
-        "width": 900,
-        "height": 700,
+        "width": 800,
+        "height": 600,
         "minWidth": 600,
         "minHeight": 500,
         "resizable": false,

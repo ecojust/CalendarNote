@@ -116,9 +116,10 @@ async function loadConfig() {
     // @ts-ignore
     if (window.__TAURI__) {
       const db = await getDb();
-      const rows = (await db.select(
-        "SELECT key, value FROM config",
-      )) as { key: string; value: string }[];
+      const rows = (await db.select("SELECT key, value FROM config")) as {
+        key: string;
+        value: string;
+      }[];
       config.value = Object.fromEntries(rows.map((r) => [r.key, r.value]));
     } else {
       config.value = {
@@ -312,7 +313,7 @@ async function handleMoveNote(id: string, newDate: string) {
 #app {
   width: 100vw;
   height: 100vh;
-  border-radius: 20px;
+  border-radius: 10px;
   overflow: hidden;
   background: transparent;
 }
@@ -336,7 +337,7 @@ async function handleMoveNote(id: string, newDate: string) {
     );
   backdrop-filter: blur(0px) saturate(150%) brightness(1.12);
   -webkit-backdrop-filter: blur(0px) saturate(150%) brightness(1.12);
-  border-radius: 20px;
+  border-radius: 10px;
   overflow: hidden;
   border: 0px solid rgba(255, 255, 255, 0);
   box-shadow:
@@ -354,7 +355,7 @@ async function handleMoveNote(id: string, newDate: string) {
 .glass-glow {
   position: absolute;
   inset: -18% -12%;
-  border-radius: 20px;
+  border-radius: 10px;
   border: none;
   pointer-events: none;
   background: radial-gradient(

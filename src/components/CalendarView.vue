@@ -135,90 +135,94 @@
     </div>
 
     <div class="calendar-toolbar">
-      <button class="toolbar-btn" title="上一月" @click="prevMonth">
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2.5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
+      <div class="toolbar-nav">
+        <button class="toolbar-btn" title="上一月" @click="prevMonth">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+        </button>
+        <div class="toolbar-title">{{ currentTitle }}</div>
+        <button class="toolbar-btn" title="下一月" @click="nextMonth">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </button>
+      </div>
+      <div class="toolbar-actions">
+        <button class="toolbar-btn" title="回到今天" @click="goToday">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="4" x2="12" y2="8" />
+            <line x1="12" y1="16" x2="12" y2="20" />
+            <line x1="4" y1="12" x2="8" y2="12" />
+            <line x1="16" y1="12" x2="20" y2="12" />
+            <circle cx="12" cy="12" r="2" />
+          </svg>
+        </button>
+        <button
+          class="toolbar-btn"
+          :class="{ danger: clearConfirm }"
+          :title="
+            clearConfirm ? '再次点击确认清除当月便签' : '清除当前月所有便签'
+          "
+          @click="toggleClearMonth"
         >
-          <polyline points="15 18 9 12 15 6" />
-        </svg>
-      </button>
-      <div class="toolbar-title">{{ currentTitle }}</div>
-      <button class="toolbar-btn" title="下一月" @click="nextMonth">
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2.5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <polyline points="9 18 15 12 9 6" />
-        </svg>
-      </button>
-      <button class="toolbar-btn" title="回到今天" @click="goToday">
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-        >
-          <circle cx="12" cy="12" r="10" />
-          <line x1="12" y1="4" x2="12" y2="8" />
-          <line x1="12" y1="16" x2="12" y2="20" />
-          <line x1="4" y1="12" x2="8" y2="12" />
-          <line x1="16" y1="12" x2="20" y2="12" />
-          <circle cx="12" cy="12" r="2" />
-        </svg>
-      </button>
-      <button
-        class="toolbar-btn"
-        :class="{ danger: clearConfirm }"
-        :title="
-          clearConfirm ? '再次点击确认清除当月便签' : '清除当前月所有便签'
-        "
-        @click="toggleClearMonth"
-      >
-        <svg
-          v-if="!clearConfirm"
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <path d="M3 6h18" />
-          <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-        </svg>
-        <svg
-          v-else
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2.5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <polyline points="20 6 9 17 4 12" />
-        </svg>
-      </button>
+          <svg
+            v-if="!clearConfirm"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M3 6h18" />
+            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+          </svg>
+          <svg
+            v-else
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        </button>
+      </div>
     </div>
 
     <FullCalendar ref="fullCalendarRef" :options="calendarOptions" />
@@ -715,11 +719,13 @@ const calendarOptions = {
     next: ">",
   },
   dayMaxEvents: 2,
+  fixedWeekCount: false,
   editable: true,
   selectable: true,
   selectMirror: true,
   dateClick: handleDateClick,
   dayCellContent: handleDayCellContent,
+  dayCellClassNames: handleDayCellClassNames,
   eventDrop: handleEventDrop,
   eventClick: handleEventClick,
   eventDidMount: handleEventMount,
@@ -734,8 +740,18 @@ watch(
       calendarApi.removeAllEvents();
       calendarApi.addEventSource(calendarEvents.value);
     }
+    syncDayNoteClasses();
   },
 );
+
+function syncDayNoteClasses() {
+  document.querySelectorAll(".fc-daygrid-day").forEach((el) => {
+    const date = el.getAttribute("data-date");
+    const hasNote = props.notes.some((n) => n.date === date);
+    el.classList.toggle("has-notes", hasNote);
+    el.classList.toggle("no-notes", !hasNote);
+  });
+}
 
 function handleContextMenu(event: Event) {
   const mouseEvent = event as MouseEvent;
@@ -884,6 +900,12 @@ function handleDateClick(arg: any) {
   showAlmanac.value = true;
 }
 
+function handleDayCellClassNames(arg: any) {
+  const dateKey = formatYmd(arg.date as Date);
+  const hasNotes = props.notes.some((n) => n.date === dateKey);
+  return hasNotes ? ["has-notes"] : ["no-notes"];
+}
+
 function handleDayCellContent(arg: any) {
   const y = arg.date.getFullYear();
   const m = arg.date.getMonth() + 1;
@@ -926,7 +948,7 @@ function handleDayCellContent(arg: any) {
 
   const html =
     '<div class="fc-daygrid-day-number">' +
-    arg.dayNumberText +
+    String(arg.date.getDate()) +
     "</div>" +
     extra +
     tag;
@@ -1126,7 +1148,7 @@ onUnmounted(() => {
     center/cover no-repeat fixed;
   opacity: 1.9;
   filter: blur(var(--bg-blur, 20px));
-  border-radius: 20px;
+  border-radius: 10px;
   z-index: -1;
 }
 
@@ -1230,7 +1252,7 @@ onUnmounted(() => {
 .calendar-toolbar {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   gap: 16px;
   padding: 12px 16px 8px;
 
@@ -1238,12 +1260,16 @@ onUnmounted(() => {
   border-bottom: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.fc .fc-header-toolbar {
-  display: none;
+.toolbar-nav,
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
-.fc .fc-col-header {
-  border-top: 20px solid red;
+.fc .fc-header-toolbar {
+  display: none;
 }
 
 .toolbar-btn {
@@ -1319,6 +1345,17 @@ onUnmounted(() => {
   min-height: 0;
 }
 
+/* 小尺寸下禁止日历内部出现滚动条 */
+/* FullCalendar 会把月视图本体放进 .fc-scroller 并在高度不足时内联 overflow:auto */
+.fc .fc-scroller {
+  overflow: hidden !important;
+}
+
+/* FullCalendar 计算列宽时会预留滚动条宽度，滚动条被隐藏后会造成右侧留白，强制占满 */
+.fc .fc-scrollgrid-sync-table {
+  width: 100% !important;
+}
+
 .fc .fc-daygrid-body {
   flex: 1;
   min-height: 0;
@@ -1350,6 +1387,33 @@ onUnmounted(() => {
   a {
     display: block;
   }
+}
+
+/* 无便签的日期：日期更大更醒目，占用更多空间 */
+.fc .fc-daygrid-day.no-notes .fc-daygrid-day-number {
+  font-size: 13px;
+  padding: 9px 10px 3px;
+}
+
+.fc .fc-daygrid-day.no-notes .fc-day-lunar {
+  font-size: 10px;
+  padding: 1px 6px 3px;
+}
+
+/* 有便签的日期：日期紧凑，把空间让给便签 */
+.fc .fc-daygrid-day.has-notes .fc-daygrid-day-number {
+  font-size: 10.5px;
+  padding: 4px 6px 1px;
+}
+
+.fc .fc-daygrid-day.has-notes .fc-day-lunar {
+  font-size: 8.5px;
+  padding: 0 3px 1px;
+}
+
+/* 没有便签时隐藏事件容器，不占空间 */
+.fc .fc-daygrid-day-events:empty {
+  display: none;
 }
 .fc .fc-col-header-cell {
   background: transparent;

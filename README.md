@@ -1,59 +1,23 @@
 # CalendarNote
 
-操作便捷的日历便笺，用于快速记录以及查看工作安排。
+操作便捷的桌面日历便笺，用于快速记录以及查看工作安排。基于 Tauri + Vue 3 构建，提供月历视图、农历黄历、便签管理等功能。
+
+![截图](./public/shotscreen.png)
 
 ## 功能特性
 
-- 日历视图：直观查看每月日期，点击日期查看/添加便签
-- 便签管理：支持创建、查看、删除便签
-- 颜色标记：8种颜色可选，方便分类管理
-- 本地存储：支持Tauri后端存储或浏览器本地存储
-- 响应式设计：自适应窗口大小
-
-## 技术栈
-
-- 前端：Vue 3 + TypeScript + Element Plus
-- 后端：Tauri 2.x (Rust)
-- 构建工具：Vite
-
-## 开发
-
-```bash
-# 安装依赖
-npm install
-
-# 开发模式
-npm run dev
-
-# 构建
-npm run build
-
-# Tauri 开发模式
-npm run tauri dev
-
-# Tauri 构建
-npm run tauri build
-```
-
-## 项目结构
-
-```
-CalendarNote/
-├── src/                    # 前端源码
-│   ├── components/        # Vue组件
-│   │   ├── CalendarView.vue  # 日历视图
-│   │   ├── NoteCard.vue     # 便签卡片
-│   │   └── NoteForm.vue     # 便签表单
-│   ├── App.vue            # 主组件
-│   └── main.ts            # 入口文件
-├── src-tauri/             # Tauri后端
-│   ├── src/
-│   │   ├── lib.rs         # Rust库
-│   │   └── main.rs        # 入口
-│   └── tauri.conf.json    # Tauri配置
-├── package.json
-└── vite.config.ts
-```
+- **月历视图**：FullCalendar 月历展示，日期格内同时显示农历、节气与节日
+- **万年历**：点击任意日期弹出黄历详情（干支、五行纳音、星座、生肖、宜忌等）
+- **便签管理**：
+  - 右键日期快速添加便签
+  - 支持标题 + 内容，8 种颜色分类标记
+  - 拖拽便签到其他日期移动；`Ctrl`/`⌘` + 拖拽复制
+  - 悬停事件出现删除按钮，双击查看详情
+- **无便签日期更紧凑**：有/无便签的日期格差异化展示，空间利用更高效
+- **自定义顶栏**：窗口锁定（禁止拖拽移动）、一键设置、最小化/最大化/关闭
+- **壁纸背景**：随机网络壁纸 + 背景模糊度可调，视觉清新
+- **本地存储**：Tauri + SQLite 持久化，浏览器环境自动降级 localStorage
+- **响应式布局**：窗口大小自适应，始终占满可用空间且无多余滚动条
 
 ## 许可证
 

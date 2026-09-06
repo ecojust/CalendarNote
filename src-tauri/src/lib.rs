@@ -53,7 +53,6 @@ pub struct Note {
     pub content: String,
     pub date: String,
     pub color: String,
-    pub reminder: Option<String>,
     pub created_at: String,
 }
 
@@ -69,7 +68,6 @@ pub fn run() {
                 content TEXT,
                 date TEXT NOT NULL,
                 color TEXT NOT NULL,
-                reminder TEXT,
                 created_at TEXT NOT NULL
             )",
             kind: tauri_plugin_sql::MigrationKind::Up,

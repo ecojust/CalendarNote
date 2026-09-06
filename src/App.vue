@@ -36,7 +36,6 @@ interface Note {
   content: string;
   date: string;
   color: string;
-  reminder?: string;
   created_at: string;
 }
 
@@ -221,14 +220,13 @@ async function handleAddNote(note: Note) {
     if (window.__TAURI__) {
       const db = await getDb();
       await db.execute(
-        "INSERT INTO notes (id, title, content, date, color, reminder, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+        "INSERT INTO notes (id, title, content, date, color, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
         [
           note.id,
           note.title,
           note.content,
           note.date,
           note.color,
-          note.reminder || null,
           note.created_at,
         ],
       );

@@ -280,10 +280,6 @@
             ></textarea>
           </div>
           <div class="form-group">
-            <label>提醒时间</label>
-            <input v-model="newNote.reminder" type="datetime-local" />
-          </div>
-          <div class="form-group">
             <label>颜色</label>
             <div class="color-options">
               <div
@@ -344,10 +340,6 @@
           <div class="detail-item">
             <label>日期</label>
             <div class="detail-value">{{ selectedNote.date }}</div>
-          </div>
-          <div v-if="selectedNote.reminder" class="detail-item">
-            <label>提醒时间</label>
-            <div class="detail-value">{{ selectedNote.reminder }}</div>
           </div>
           <div class="detail-item">
             <label>颜色</label>
@@ -520,7 +512,6 @@ interface Note {
   content: string;
   date: string;
   color: string;
-  reminder?: string;
   created_at: string;
 }
 
@@ -674,7 +665,6 @@ const newNote = ref({
   title: "",
   content: "",
   color: "#ff5f8f",
-  reminder: "",
 });
 
 const colors = [
@@ -697,7 +687,6 @@ const calendarEvents = computed<EventInput[]>(() => {
     borderColor: note.color,
     extendedProps: {
       content: note.content,
-      reminder: note.reminder,
     },
   }));
 });
@@ -979,7 +968,6 @@ function handleEventDrop(info: any) {
         content: originalNote.content,
         date: newDate,
         color: originalNote.color,
-        reminder: originalNote.reminder,
         created_at: new Date().toISOString(),
       };
       emit("add-note", newNote);
@@ -1053,7 +1041,6 @@ function closeAddDialog() {
     title: "",
     content: "",
     color: "#ff5f8f",
-    reminder: "",
   };
 }
 
@@ -1075,7 +1062,6 @@ function addNote() {
     content: newNote.value.content.trim(),
     date: contextMenu.value.date,
     color: newNote.value.color,
-    reminder: newNote.value.reminder || undefined,
     created_at: new Date().toISOString(),
   };
 

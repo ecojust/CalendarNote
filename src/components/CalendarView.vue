@@ -411,6 +411,10 @@
               class="blur-slider"
             />
           </div>
+          <div class="form-group qrcode-group">
+            <label>扫码关注</label>
+            <img :src="qrcodeSrc" class="qrcode-img" alt="二维码" />
+          </div>
         </div>
         <div class="dialog-footer">
           <button class="btn-cancel" @click="bgBlur = 20">恢复默认</button>
@@ -505,6 +509,7 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import type { EventInput } from "@fullcalendar/core";
 import { Solar, HolidayUtil } from "lunar-typescript";
+import qrcodeSrc from "@/assets/qrcode.jpg";
 
 interface Note {
   id: string;
@@ -1857,6 +1862,21 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.qrcode-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.qrcode-img {
+  width: 140px;
+  height: 140px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  object-fit: cover;
 }
 
 .wallpaper-preview {

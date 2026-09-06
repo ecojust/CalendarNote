@@ -1,4 +1,6 @@
-# CalendarNote
+<div align="center">
+  <img src="./logo.png" alt="CalendarNote Logo" width="128" />
+</div>
 
 操作便捷的桌面日历便笺，用于快速记录以及查看工作安排。基于 Tauri + Vue 3 构建，提供月历视图、农历黄历、便签管理等功能。
 

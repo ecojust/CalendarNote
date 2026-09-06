@@ -1,7 +1,10 @@
 <template>
   <div
     class="calendar-container"
-    :style="{ '--bg-blur': bgBlur + 'px', '--bg-image': `url('${wallpaperBg}')` }"
+    :style="{
+      '--bg-blur': bgBlur + 'px',
+      '--bg-image': `url('${wallpaperBg}')`,
+    }"
   >
     <div class="titlebar" :data-tauri-drag-region="isLocked ? 'false' : 'true'">
       <div class="titlebar-title">CalendarNote</div>
@@ -419,6 +422,83 @@
         </div>
       </div>
     </div>
+
+    <!-- 万年历弹窗 -->
+    <div v-if="showAlmanac" class="dialog-overlay" @click="closeAlmanac">
+      <div class="dialog almanac-dialog" @click.stop>
+        <div class="dialog-header">
+          <h3>万年历</h3>
+          <button class="dialog-close" @click="closeAlmanac">
+            <svg width="14" height="14" viewBox="0 0 14 14">
+              <path
+                d="M2 2l10 10M12 2l-10 10"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+              />
+            </svg>
+          </button>
+        </div>
+        <div v-if="almanac" class="dialog-body">
+          <div class="almanac-date">
+            <div class="almanac-big">{{ almanac.lunarDay }}</div>
+            <div class="almanac-main">
+              <div class="almanac-solar">
+                {{ almanac.solarText }}&nbsp;{{ almanac.week }}
+              </div>
+              <div class="almanac-ganzhi">
+                {{ almanac.yearGanZhi }}年 {{ almanac.monthGanZhi }}月
+                {{ almanac.dayGanZhi }}日
+              </div>
+            </div>
+          </div>
+
+          <div class="almanac-grid">
+            <div
+              v-for="item in almanacItems"
+              :key="item.label"
+              class="almanac-info"
+            >
+              <span class="almanac-label">{{ item.label }}</span>
+              <span class="almanac-value">{{ item.value }}</span>
+            </div>
+          </div>
+
+          <div
+            v-if="almanac.jieQi || almanac.festivals.length > 0"
+            class="almanac-tag-row"
+          >
+            <span v-if="almanac.jieQi" class="almanac-tag">{{
+              almanac.jieQi
+            }}</span>
+            <span
+              v-for="f in almanac.festivals"
+              :key="f"
+              class="almanac-tag festival"
+              >{{ f }}</span
+            >
+          </div>
+
+          <div class="almanac-yiji">
+            <div class="almanac-yi">
+              <span class="almanac-yiji-title yi">宜</span>
+              <span class="almanac-yiji-text">
+                {{ almanac.dayYi.join("、") || "无" }}
+              </span>
+            </div>
+            <div class="almanac-ji">
+              <span class="almanac-yiji-title ji">忌</span>
+              <span class="almanac-yiji-text">
+                {{ almanac.dayJi.join("、") || "无" }}
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="dialog-footer">
+          <button class="btn-cancel" @click="closeAlmanac">关闭</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -438,6 +518,29 @@ interface Note {
   color: string;
   reminder?: string;
   created_at: string;
+}
+
+interface AlmanacData {
+  solarText: string;
+  week: string;
+  lunarYear: string;
+  lunarMonth: string;
+  lunarDay: string;
+  yearGanZhi: string;
+  monthGanZhi: string;
+  dayGanZhi: string;
+  yearNaYin: string;
+  monthNaYin: string;
+  dayNaYin: string;
+  shengXiao: string;
+  xingZuo: string;
+  jieQi?: string;
+  festivals: string[];
+  chongDesc: string;
+  dayYi: string[];
+  dayJi: string[];
+  xiu: string;
+  zhiXing: string;
 }
 
 const props = defineProps<{
@@ -470,7 +573,7 @@ const defaultWallpaper = "https://picsum.photos/1920/1080?random=1";
 const wallpaper = ref(
   props.config?.["wallpaper"] != null
     ? props.config["wallpaper"]
-    : localStorage.getItem("calendar-wallpaper") ?? "",
+    : (localStorage.getItem("calendar-wallpaper") ?? ""),
 );
 const wallpaperBg = ref(defaultWallpaper);
 const updatingWallpaper = ref(false);
@@ -615,6 +718,7 @@ const calendarOptions = {
   editable: true,
   selectable: true,
   selectMirror: true,
+  dateClick: handleDateClick,
   dayCellContent: handleDayCellContent,
   eventDrop: handleEventDrop,
   eventClick: handleEventClick,
@@ -709,6 +813,76 @@ function goToday() {
 }
 
 const dayCellCache = new Map<string, string>();
+
+const showAlmanac = ref(false);
+const almanac = ref<AlmanacData | null>(null);
+
+const almanacItems = computed(() => {
+  const a = almanac.value;
+  if (!a) return [];
+  return [
+    {
+      label: "农历",
+      value: `${a.lunarYear}（${a.shengXiao}年）${a.lunarMonth} ${a.lunarDay}`,
+    },
+    {
+      label: "干支",
+      value: `${a.yearGanZhi}年 ${a.monthGanZhi}月 ${a.dayGanZhi}日`,
+    },
+    {
+      label: "纳音五行",
+      value: `${a.yearNaYin} / ${a.monthNaYin} / ${a.dayNaYin}`,
+    },
+    { label: "生肖", value: a.shengXiao },
+    { label: "星座", value: a.xingZuo },
+    { label: "二十八宿", value: a.xiu },
+    { label: "值神", value: a.zhiXing },
+    { label: "冲煞", value: a.chongDesc },
+  ];
+});
+
+function closeAlmanac() {
+  showAlmanac.value = false;
+}
+
+function buildAlmanac(date: Date): AlmanacData {
+  const y = date.getFullYear();
+  const m = date.getMonth() + 1;
+  const d = date.getDate();
+  const solar = Solar.fromYmd(y, m, d);
+  const lunar = solar.getLunar();
+  return {
+    solarText: `${y}年${m}月${d}日`,
+    week: lunar.getWeekInChinese(),
+    lunarYear: lunar.getYearInChinese(),
+    lunarMonth: lunar.getMonthInChinese(),
+    lunarDay: lunar.getDayInChinese(),
+    yearGanZhi: lunar.getYearInGanZhi(),
+    monthGanZhi: lunar.getMonthInGanZhi(),
+    dayGanZhi: lunar.getDayInGanZhi(),
+    yearNaYin: lunar.getYearNaYin(),
+    monthNaYin: lunar.getMonthNaYin(),
+    dayNaYin: lunar.getDayNaYin(),
+    shengXiao: lunar.getYearShengXiao(),
+    xingZuo: solar.getXingZuo(),
+    jieQi: lunar.getJieQi() || undefined,
+    festivals: [
+      ...lunar.getFestivals(),
+      ...lunar.getOtherFestivals(),
+      ...solar.getFestivals(),
+    ],
+    chongDesc: lunar.getDayChongDesc(),
+    dayYi: lunar.getDayYi(),
+    dayJi: lunar.getDayJi(),
+    xiu: lunar.getXiu(),
+    zhiXing: lunar.getZhiXing(),
+  };
+}
+
+function handleDateClick(arg: any) {
+  almanac.value = buildAlmanac(arg.date as Date);
+  showAlmanac.value = true;
+}
 
 function handleDayCellContent(arg: any) {
   const y = arg.date.getFullYear();
@@ -936,6 +1110,9 @@ onUnmounted(() => {
   background: transparent;
   overflow: hidden;
   border: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
 }
 
 .calendar-container::before {
@@ -1251,11 +1428,11 @@ onUnmounted(() => {
   vertical-align: top;
 
   &.rest {
-    background: rgba(255, 107, 157, 0.85);
+    background: rgba(76, 200, 130, 0.9);
   }
 
   &.work {
-    background: rgba(79, 172, 254, 0.85);
+    background: rgba(240, 84, 84, 0.9);
   }
 }
 
@@ -1641,6 +1818,168 @@ onUnmounted(() => {
   border: 1px solid rgba(255, 255, 255, 0.35);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
   flex-shrink: 0;
+}
+
+.almanac-dialog {
+  width: 460px;
+  max-width: 92vw;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 251, 245, 0.94),
+    rgba(250, 240, 228, 0.92)
+  );
+  border: 1px solid rgba(214, 178, 140, 0.4);
+  box-shadow:
+    0 20px 60px rgba(90, 50, 20, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+
+  .dialog-header {
+    border-bottom-color: rgba(205, 160, 115, 0.35);
+
+    h3 {
+      color: #c2483c;
+    }
+  }
+
+  .dialog-close {
+    color: rgba(150, 105, 70, 0.6);
+
+    &:hover {
+      background: rgba(194, 72, 60, 0.12);
+      color: #c2483c;
+    }
+  }
+}
+
+.almanac-date {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 4px 0 14px;
+  border-bottom: 1px solid rgba(205, 160, 115, 0.35);
+  margin-bottom: 14px;
+}
+
+.almanac-big {
+  font-size: 34px;
+  font-weight: 700;
+  color: #c2483c;
+  line-height: 1;
+}
+
+.almanac-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.almanac-solar {
+  font-size: 17px;
+  font-weight: 700;
+  color: #4a3626;
+}
+
+.almanac-ganzhi {
+  font-size: 13px;
+  color: #a0806a;
+}
+
+.almanac-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 18px;
+  margin-bottom: 14px;
+}
+
+.almanac-info {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px dashed rgba(205, 160, 115, 0.35);
+}
+
+.almanac-label {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: #96601a;
+  background: rgba(212, 175, 55, 0.16);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  padding: 1px 6px;
+  border-radius: 6px;
+}
+
+.almanac-value {
+  font-size: 13px;
+  color: #5a4230;
+}
+
+.almanac-tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.almanac-tag {
+  font-size: 12px;
+  color: #a0362c;
+  background: rgba(210, 86, 68, 0.12);
+  border: 1px solid rgba(210, 86, 68, 0.35);
+  padding: 2px 10px;
+  border-radius: 999px;
+
+  &.festival {
+    color: #7a5c12;
+    background: rgba(233, 195, 62, 0.22);
+    border-color: rgba(210, 170, 40, 0.45);
+  }
+}
+
+.almanac-yiji {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(205, 160, 115, 0.3);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.almanac-yi,
+.almanac-ji {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.almanac-yiji-title {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  margin-top: 1px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+
+  &.yi {
+    background: linear-gradient(180deg, #e05a4c, #c2483c);
+  }
+
+  &.ji {
+    background: linear-gradient(180deg, #98908a, #7a736d);
+  }
+}
+
+.almanac-yiji-text {
+  font-size: 12px;
+  line-height: 1.7;
+  color: #5a4230;
 }
 
 .wallpaper-actions {

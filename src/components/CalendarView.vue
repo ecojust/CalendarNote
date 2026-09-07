@@ -73,10 +73,10 @@
             <circle cx="12" cy="12" r="3" />
           </svg>
         </button>
-        <!-- 最小化/最大化已暂禁用
         <button
           class="titlebar-btn"
           id="titlebar-minimize"
+          title="最小化"
           @click="minimize"
           data-tauri-drag-region="false"
         >
@@ -84,39 +84,6 @@
             <path d="M2 6h8" stroke="currentColor" stroke-width="1.5" />
           </svg>
         </button>
-        <button
-          class="titlebar-btn"
-          id="titlebar-maximize"
-          @click="toggleMaximize"
-          data-tauri-drag-region="false"
-        >
-          <svg v-if="!isMaximized" width="12" height="12" viewBox="0 0 12 12">
-            <rect
-              x="2"
-              y="2"
-              width="8"
-              height="8"
-              stroke="currentColor"
-              stroke-width="1.5"
-              fill="none"
-            />
-          </svg>
-          <svg v-else width="12" height="12" viewBox="0 0 12 12">
-            <path
-              d="M2 4h6v6H2z"
-              stroke="currentColor"
-              stroke-width="1.5"
-              fill="none"
-            />
-            <path
-              d="M4 2h6v6"
-              stroke="currentColor"
-              stroke-width="1.5"
-              fill="none"
-            />
-          </svg>
-        </button>
-        -->
         <button
           class="titlebar-btn"
           id="titlebar-close"
@@ -559,6 +526,9 @@ const emit = defineEmits<{
 }>();
 
 const fullCalendarRef = ref<InstanceType<typeof FullCalendar>>();
+const ctrlKeyPressed = ref(false);
+const copyDragRequested = ref(false);
+let replayingCtrlDragMouseDown = false;
 const isLocked = ref(localStorage.getItem("calendar-locked") === "1");
 const currentTitle = ref("");
 const currentRange = ref({ start: "", end: "" });
@@ -720,7 +690,9 @@ const calendarOptions = {
   dateClick: handleDateClick,
   dayCellContent: handleDayCellContent,
   dayCellClassNames: handleDayCellClassNames,
+  eventDragStart: handleEventDragStart,
   eventDrop: handleEventDrop,
+  eventDragStop: handleEventDragStop,
   eventClick: handleEventClick,
   eventDidMount: handleEventMount,
   datesSet: handleDatesSet,
@@ -951,10 +923,23 @@ function handleDayCellContent(arg: any) {
   return { html };
 }
 
+function handleEventDragStart(info: any) {
+  copyDragRequested.value =
+    ctrlKeyPressed.value || info.jsEvent?.ctrlKey || info.jsEvent?.metaKey;
+}
+
+function handleEventDragStop() {
+  copyDragRequested.value = false;
+}
+
 function handleEventDrop(info: any) {
   const noteId = info.event.id;
   const newDate = info.event.startStr;
-  const isCopy = info.jsEvent?.ctrlKey || info.jsEvent?.metaKey;
+  const isCopy =
+    copyDragRequested.value ||
+    ctrlKeyPressed.value ||
+    info.jsEvent?.ctrlKey ||
+    info.jsEvent?.metaKey;
 
   console.log(
     "[FullCalendar] eventDrop:",
@@ -1074,17 +1059,10 @@ function addNote() {
   closeAddDialog();
 }
 
-// 最小化/最大化已暂禁用（按钮已注释）
-// async function minimize() {
-//   const { getCurrentWindow } = await import("@tauri-apps/api/window");
-//   await getCurrentWindow().minimize();
-// }
-//
-// async function toggleMaximize() {
-//   const { getCurrentWindow } = await import("@tauri-apps/api/window");
-//   await getCurrentWindow().toggleMaximize();
-//   isMaximized.value = !isMaximized.value;
-// }
+async function minimize() {
+  const { getCurrentWindow } = await import("@tauri-apps/api/window");
+  await getCurrentWindow().minimize();
+}
 
 function toggleLock() {
   isLocked.value = !isLocked.value;
@@ -1096,19 +1074,80 @@ async function close() {
   await getCurrentWindow().close();
 }
 
+function handleModifierKeyDown(event: KeyboardEvent) {
+  if (event.key === "Control" || event.key === "Meta") {
+    ctrlKeyPressed.value = true;
+  }
+}
+
+function handleModifierKeyUp(event: KeyboardEvent) {
+  if (event.key === "Control" || event.key === "Meta") {
+    ctrlKeyPressed.value = false;
+  }
+}
+
+function resetModifierKey() {
+  ctrlKeyPressed.value = false;
+}
+
+function handleCtrlDragMouseDown(event: MouseEvent) {
+  if (
+    replayingCtrlDragMouseDown ||
+    event.button !== 0 ||
+    (!event.ctrlKey && !event.metaKey) ||
+    !(event.target instanceof Element) ||
+    !event.target.closest(".fc-event")
+  ) {
+    return;
+  }
+
+  replayingCtrlDragMouseDown = true;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+
+  const replayedEvent = new MouseEvent("mousedown", {
+    bubbles: true,
+    cancelable: true,
+    view: event.view,
+    detail: event.detail,
+    screenX: event.screenX,
+    screenY: event.screenY,
+    clientX: event.clientX,
+    clientY: event.clientY,
+    button: event.button,
+    buttons: event.buttons,
+    relatedTarget: event.relatedTarget,
+  });
+
+  try {
+    (event.target as Element).dispatchEvent(replayedEvent);
+  } finally {
+    replayingCtrlDragMouseDown = false;
+  }
+}
+
 onMounted(() => {
+  void applyWallpaper(wallpaper.value);
   document.addEventListener("click", hideContextMenu);
+  window.addEventListener("keydown", handleModifierKeyDown, true);
+  window.addEventListener("keyup", handleModifierKeyUp, true);
+  window.addEventListener("blur", resetModifierKey, true);
   const calendarEl = document.querySelector(".fc");
   if (calendarEl) {
     calendarEl.addEventListener("contextmenu", handleContextMenu);
+    calendarEl.addEventListener("mousedown", handleCtrlDragMouseDown as EventListener, true);
   }
 });
 
 onUnmounted(() => {
   document.removeEventListener("click", hideContextMenu);
+  window.removeEventListener("keydown", handleModifierKeyDown, true);
+  window.removeEventListener("keyup", handleModifierKeyUp, true);
+  window.removeEventListener("blur", resetModifierKey, true);
   const calendarEl = document.querySelector(".fc");
   if (calendarEl) {
     calendarEl.removeEventListener("contextmenu", handleContextMenu);
+    calendarEl.removeEventListener("mousedown", handleCtrlDragMouseDown as EventListener, true);
   }
 });
 </script>

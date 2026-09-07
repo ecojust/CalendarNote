@@ -55,6 +55,7 @@ async function getDb() {
 onMounted(async () => {
   window.addEventListener("pointermove", handlePointerMove, { passive: true });
   await loadConfig();
+  await loadNotes();
 });
 
 onBeforeUnmount(() => {
